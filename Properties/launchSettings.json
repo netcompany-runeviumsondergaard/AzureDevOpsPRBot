@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "AzureDevOpsPRBot": {
+      "commandName": "Project",
+        "environmentVariables": {
+            //"PAT": "Set me here or as an Environment Variable",
+        }
+    }
+  }
+}

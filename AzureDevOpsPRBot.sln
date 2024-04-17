@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.8.34601.278
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzureDevOpsPRBot", "AzureDevOpsPRBot.csproj", "{635CA47E-D09F-4CB5-ADA1-FC456FF0280F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{635CA47E-D09F-4CB5-ADA1-FC456FF0280F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{635CA47E-D09F-4CB5-ADA1-FC456FF0280F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{635CA47E-D09F-4CB5-ADA1-FC456FF0280F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{635CA47E-D09F-4CB5-ADA1-FC456FF0280F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {24AF911D-C495-4573-85BE-846A14AD48DF}
+	EndGlobalSection
+EndGlobal
