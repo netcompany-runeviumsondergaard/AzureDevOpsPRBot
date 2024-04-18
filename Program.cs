@@ -36,7 +36,7 @@
 
            ReportService.DisplayPrSummary(prSummary, noChangeList, nonExistentBranches);
 
-           if (prSummary.Any())
+           if (prSummary.Count != 0)
            {
                Console.WriteLine("Do you want to create the above pull requests? (Y/N)");
                var userInput = Console.ReadLine()?.ToUpper();
