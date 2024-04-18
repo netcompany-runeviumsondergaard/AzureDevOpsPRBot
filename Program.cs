@@ -45,7 +45,7 @@
                {
                    foreach (var valueTuple in prSummary)
                    {
-                       await pullRequestService.CreatePullRequest(valueTuple.RepositoryId, valueTuple.TargetBranch, valueTuple.TargetBranch);
+                       await pullRequestService.CreatePullRequest(valueTuple.RepositoryId, valueTuple.SourceBranch, valueTuple.TargetBranch);
                    }
                }
            }
