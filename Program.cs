@@ -6,7 +6,6 @@ internal partial class Program
     {
         var configurationService = new ConfigurationService();
         var pullRequestService = new PullRequestService(configurationService);
-        var reportService = new ReportService();
 
         var sourceBranch = configurationService.GetValue(Constants.SourceBranch);
         var targetBranch = configurationService.GetValue(Constants.TargetBranch);
@@ -44,8 +43,20 @@ internal partial class Program
         {
             foreach (var valueTuple in prSummary)
             {
-                await pullRequestService.CreatePullRequest(valueTuple.RepositoryId, valueTuple.SourceBranch,
-                    valueTuple.TargetBranch);
+                var latestCommitId = await pullRequestService.GetLatestCommitId(valueTuple.RepositoryId, valueTuple.SourceBranch);
+
+                if (string.IsNullOrEmpty(latestCommitId))
+                {
+                    continue;
+                }
+
+                var intermediateBranch = await pullRequestService.CreateIntermediateBranch(valueTuple.RepositoryId, valueTuple.SourceBranch, latestCommitId);
+
+                if(intermediateBranch != null)
+                {
+                    await pullRequestService.CreatePullRequest(valueTuple.RepositoryId, intermediateBranch,
+                        valueTuple.TargetBranch);
+                }
             }
         }
     }

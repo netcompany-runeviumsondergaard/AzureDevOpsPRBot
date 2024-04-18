@@ -25,4 +25,15 @@ internal abstract partial class Program
         public int Add { get; set; }
         public int Delete { get; set; }
     }
+
+    public class CommitResponse
+    {
+        public int Count { get; set; }
+        public List<Commit> Value { get; set; }
+    }
+
+    public class Commit
+    {
+        public string? CommitId { get; set; }
+    }
 }
