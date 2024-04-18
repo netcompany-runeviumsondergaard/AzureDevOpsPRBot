@@ -65,12 +65,17 @@ public class PullRequestService
 
     public async Task CreatePullRequest(string repositoryId, string sourceBranch, string targetBranch)
     {
+
         var baseUrl = _configurationService.GetValue(Constants.BaseUrl);
         var apiVersion = _configurationService.GetValue(Constants.ApiVersion);
 
+
+        var latestCommitId = await GetLatestCommitId(repositoryId, sourceBranch);
+        var intermediateBranch = await CreateIntermediateBranch(repositoryId, sourceBranch, latestCommitId);
+
         var pullRequest = new
         {
-            sourceRefName = $"refs/heads/{sourceBranch}",
+            sourceRefName = $"refs/heads/{intermediateBranch}",
             targetRefName = $"refs/heads/{targetBranch}",
             title = $"Merging changes from {sourceBranch} to {targetBranch}",
             description = "Automated pull request to merge changes"
@@ -98,7 +103,7 @@ public class PullRequestService
         }
     }
 
-    public async Task<string?> CreateIntermediateBranch(string repositoryId, string sourceBranch, string? commitId)
+    private async Task<string?> CreateIntermediateBranch(string repositoryId, string sourceBranch, string? commitId)
     {
         var baseUrl = _configurationService.GetValue(Constants.BaseUrl);
         var apiVersion = _configurationService.GetValue(Constants.ApiVersion);
@@ -133,7 +138,7 @@ public class PullRequestService
     }
 
 
-    public async Task<string?> GetLatestCommitId(string repositoryId, string branchName)
+    private async Task<string?> GetLatestCommitId(string repositoryId, string branchName)
     {
         var baseUrl = _configurationService.GetValue(Constants.BaseUrl);
         var apiVersion = _configurationService.GetValue(Constants.ApiVersion);

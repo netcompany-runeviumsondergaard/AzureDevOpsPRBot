@@ -1,29 +1,44 @@
 ﻿namespace AzureDevOpsPRBot;
 
-public class ReportService
+public static class ReportService
 {
     public static void DisplayPrSummary(List<(string RepositoryId, string SourceBranch, string TargetBranch)> prSummary, List<string> noChangeList, List<(string RepositoryId, string BranchName)> nonExistentBranches)
     {
-        Console.WriteLine("\n----------------- Pull Request Summary -----------------");
-        Console.WriteLine("\n----------------- Repositories with Potential Pull Requests -----------------");
+        Console.WriteLine("\n----------------- Pull Request Summary -----------------\n");
+
+        // Display repositories with potential pull requests
+        Console.WriteLine("----------------- Repositories with Potential Pull Requests -----------------\n");
+        Console.WriteLine($"{ "Repository ID",-30} | { "Source Branch",-20} | { "Target Branch",-20}");
+        Console.WriteLine(new string('-', 75));
         foreach (var (repositoryId, sourceBranch, targetBranch) in prSummary)
         {
-            Console.WriteLine($"Repository: {repositoryId}, Source Branch: {sourceBranch}, Target Branch: {targetBranch}");
+            Console.WriteLine($"{ repositoryId,-30} | { sourceBranch,-20} | { targetBranch,-20}");
         }
 
-        Console.WriteLine("\n----------------- Repositories with No Changes -----------------");
+        // Display repositories with no changes
+        Console.WriteLine("\n----------------- Repositories with No Changes -----------------\n");
+        Console.WriteLine($"{ "Repository ID",-30} | Status");
+        Console.WriteLine(new string('-', 45));
         foreach (var repo in noChangeList)
         {
-            Console.WriteLine($"Repository: {repo}");
+            Console.WriteLine($"{ repo,-30} | No Changes");
         }
 
-        Console.WriteLine("\n----------------- Repositories with Non-Existent Source Branches -----------------");
+        // Display repositories with non-existent branches
+        Console.WriteLine("\n----------------- Repositories with Non-Existent Branches -----------------\n");
+        Console.WriteLine($"{ "Repository ID",-30} | { "Branch Name",-30} | Status");
+        Console.WriteLine(new string('-', 75));
         foreach (var (repositoryId, branchName) in nonExistentBranches)
         {
-            Console.WriteLine($"Repository: {repositoryId}, Branch: {branchName} does not exist");
+            // Set the console color to red for highlighting the error
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine($"{ repositoryId,-30} | { branchName,-30} | Does not exist");
+            // Reset the console color
+            Console.ResetColor();
         }
 
         Console.WriteLine("-------------------------------------------------------\n");
     }
+
 
 }
