@@ -1,9 +1,9 @@
-﻿using Microsoft.Extensions.Configuration;
-using AzureDevOpsPRBot;
+﻿using AzureDevOpsPRBot;
+using Microsoft.Extensions.Configuration;
 
 public class ConfigurationService
 {
-    private IConfigurationRoot _configuration;
+    private readonly IConfigurationRoot _configuration;
 
     public ConfigurationService()
     {

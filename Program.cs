@@ -1,58 +1,86 @@
-﻿namespace AzureDevOpsPRBot
+﻿namespace AzureDevOpsPRBot;
+
+internal partial class Program
 {
-   internal partial class Program
-   {
-       private static async Task Main()
-       {
-           var configurationService = new ConfigurationService();
-           var pullRequestService = new PullRequestService(configurationService);
+    private static async Task Main()
+    {
+        var configurationService = new ConfigurationService();
+        var pullRequestService = new PullRequestService(configurationService);
 
-           var sourceBranch = configurationService.GetValue(Constants.SourceBranch);
-           var targetBranch = configurationService.GetValue(Constants.TargetBranch);
-           var repositories = configurationService.GetRepositoryList();
+        var sourceBranch = configurationService.GetValue(Constants.SourceBranch);
+        var targetBranch = configurationService.GetValue(Constants.TargetBranch);
+        var repositoryIds = configurationService.GetRepositoryList();
 
-           var prSummary = new List<(string RepositoryId, string SourceBranch, string TargetBranch)>();
-           var noChangeList = new List<string>();
-           var nonExistentBranches = new List<(string RepositoryId, string BranchName)>();
+        var needPrRepositories = new List<(string RepositoryId, string SourceBranch, string TargetBranch)>();
+        var noChangeRepositoryIds = new List<string>();
+        var nonExistentBranchRepositoryIds = new List<(string RepositoryId, string BranchName)>();
+        var repositoriesWithExistingPr = new List<(string RepositoryId, string SourceBranch, string TargetBranch)>();
 
-           foreach (var repositoryId in repositories)
-           {
-               if (await pullRequestService.BranchExists(repositoryId, sourceBranch))
-               {
-                   if (await pullRequestService.BranchHasChanges(repositoryId, sourceBranch, targetBranch))
-                   {
-                       prSummary.Add((repositoryId, sourceBranch, targetBranch));
-                   }
-                   else
-                   {
-                       noChangeList.Add(repositoryId);
-                   }
-               }
-               else
-               {
-                   nonExistentBranches.Add((repositoryId, sourceBranch));
-               }
-           }
+        foreach (var repositoryId in repositoryIds)
+        {
+            var sourceBranchExists = await pullRequestService.BranchExists(repositoryId, sourceBranch);
+            var targetBranchExists = await pullRequestService.BranchExists(repositoryId, targetBranch);
 
-           ReportService.DisplayPrSummary(prSummary, noChangeList, nonExistentBranches);
+            if (sourceBranchExists && targetBranchExists)
+            {
+                if (await pullRequestService.BranchHasChanges(repositoryId, sourceBranch, targetBranch))
+                {
+                    // Check if a pull request already exists
+                    var prExists = await pullRequestService.PullRequestExists(repositoryId,
+                        $"{sourceBranch}-intermediate", targetBranch);
+                    if (prExists)
+                    {
+                        repositoriesWithExistingPr.Add((repositoryId, sourceBranch, targetBranch));
+                    }
+                    else
+                    {
+                        needPrRepositories.Add((repositoryId, sourceBranch, targetBranch));
+                    }
+                }
+                else
+                {
+                    noChangeRepositoryIds.Add(repositoryId);
+                }
+            }
+            else
+            {
+                if (!sourceBranchExists)
+                {
+                    nonExistentBranchRepositoryIds.Add((repositoryId, sourceBranch));
+                }
+                if (!targetBranchExists)
+                {
+                    nonExistentBranchRepositoryIds.Add((repositoryId, targetBranch));
+                }
+            }
+        }
 
-           if (prSummary.Count != 0)
-           {
-               Console.WriteLine("Do you want to create the above pull requests? (Y/N)");
-               var userInput = Console.ReadLine()?.ToUpper();
+        ReportService.DisplayPrSummary(needPrRepositories, noChangeRepositoryIds, nonExistentBranchRepositoryIds,
+            repositoriesWithExistingPr);
 
-               if (userInput == "Y")
-               {
-                   foreach (var valueTuple in prSummary)
-                   {
-                       await pullRequestService.CreatePullRequest(valueTuple.RepositoryId, valueTuple.SourceBranch, valueTuple.TargetBranch);
-                   }
-               }
-           }
-           else
-           {
-               Console.WriteLine("Everything is up to date, no pull requests needed! :)");
-           }
-       }
-   }
+        var isPullRequestsCreated = false;
+
+        if (needPrRepositories.Count != 0)
+        {
+            Console.WriteLine("Do you want to create the above pull requests? (Y/N)");
+            var userInput = Console.ReadLine()?.ToUpper();
+
+            if (userInput == "Y")
+            {
+                foreach (var repositoryPrInfo in needPrRepositories)
+                {
+                    await pullRequestService.CreatePullRequest(repositoryPrInfo.RepositoryId,
+                        repositoryPrInfo.SourceBranch, repositoryPrInfo.TargetBranch);
+                }
+
+                isPullRequestsCreated = true;
+            }
+        }
+
+        if (!isPullRequestsCreated)
+        {
+            Console.WriteLine("-------------------------------------------------------");
+            Console.WriteLine("\nEverything is up to date, no pull requests needed! :)");
+        }
+    }
 }

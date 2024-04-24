@@ -65,7 +65,6 @@ public class PullRequestService
 
     public async Task CreatePullRequest(string repositoryId, string sourceBranch, string targetBranch)
     {
-
         var baseUrl = _configurationService.GetValue(Constants.BaseUrl);
         var apiVersion = _configurationService.GetValue(Constants.ApiVersion);
 
@@ -107,7 +106,7 @@ public class PullRequestService
     {
         var baseUrl = _configurationService.GetValue(Constants.BaseUrl);
         var apiVersion = _configurationService.GetValue(Constants.ApiVersion);
-        var intermediateBranch = $"{sourceBranch}_intermediate";
+        var intermediateBranch = $"{sourceBranch}-intermediate";
 
         var branchCreation = new[]
         {
@@ -137,6 +136,25 @@ public class PullRequestService
         return null;
     }
 
+    public async Task<bool> PullRequestExists(string repositoryId, string sourceBranch, string targetBranch)
+    {
+        var baseUrl = _configurationService.GetValue(Constants.BaseUrl);
+        var apiVersion = _configurationService.GetValue(Constants.ApiVersion);
+
+        var response =
+            await _client.GetAsync(
+                $"{baseUrl}/{repositoryId}/pullrequests?sourceRefName=refs/heads/{sourceBranch}&targetRefName=refs/heads/{targetBranch}&api-version={apiVersion}");
+
+        if (!response.IsSuccessStatusCode)
+        {
+            return false;
+        }
+
+        var content = await response.Content.ReadAsStringAsync();
+        var prs = JsonConvert.DeserializeObject<PullRequestResponse>(content);
+
+        return prs!.Count > 0;
+    }
 
     private async Task<string?> GetLatestCommitId(string repositoryId, string branchName)
     {

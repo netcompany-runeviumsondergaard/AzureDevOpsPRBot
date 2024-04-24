@@ -1,4 +1,6 @@
-﻿namespace AzureDevOpsPRBot;
+﻿using Microsoft.TeamFoundation.SourceControl.WebApi;
+
+namespace AzureDevOpsPRBot;
 
 internal abstract partial class Program
 {
@@ -35,5 +37,11 @@ internal abstract partial class Program
     public class Commit
     {
         public string? CommitId { get; set; }
+    }
+
+    public class PullRequestResponse
+    {
+        public int Count { get; set; }
+        public List<GitPullRequest> Value { get; set; }
     }
 }
