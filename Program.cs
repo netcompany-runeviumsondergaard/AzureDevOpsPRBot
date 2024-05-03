@@ -1,10 +1,20 @@
-﻿namespace AzureDevOpsPRBot;
+﻿using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace AzureDevOpsPRBot;
 
 internal partial class Program
 {
     private static async Task Main()
     {
-        var configurationService = new ConfigurationService();
+        // Set up dependency injection
+        ServiceCollection serviceCollection = [];
+        serviceCollection.AddDataProtection(); // This adds IDataProtectionProvider to DI
+        IServiceProvider services = serviceCollection.BuildServiceProvider();
+        var dataProtectionProvider = services.GetRequiredService<IDataProtectionProvider>();
+
+
+        var configurationService = new ConfigurationService(dataProtectionProvider);
         var pullRequestService = new PullRequestService(configurationService);
 
         var sourceBranch = configurationService.GetValue(Constants.SourceBranch);

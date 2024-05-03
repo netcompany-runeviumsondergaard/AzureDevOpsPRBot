@@ -18,10 +18,41 @@ public class PullRequestService
         _client = new HttpClient();
         _client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-        var pat = _configurationService.GetValue(Constants.PAT);
+        var pat = _configurationService.GetPat();
+   
+        // Validate the PAT
+        var isPatValid = IsPatValid(pat).Result;
+        while(!isPatValid)
+        {
+            _configurationService.DeletePatFile();
+            pat = _configurationService.GetPat();
+            isPatValid = IsPatValid(pat).Result;
+        }
+
         var base64Token = Convert.ToBase64String(Encoding.ASCII.GetBytes($":{pat}"));
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", base64Token);
     }
+
+
+    private async Task<bool> IsPatValid(string pat)
+    {
+        var base64Token = Convert.ToBase64String(Encoding.ASCII.GetBytes($":{pat}"));
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", base64Token);
+
+        var baseUrl = _configurationService.GetValue(Constants.BaseUrl);
+        var response = await _client.GetAsync($"{baseUrl}");
+
+        if (!response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.NonAuthoritativeInformation)
+        {
+            // Log the status code for debugging
+            Console.WriteLine($"Response Status Code: {response.StatusCode}");
+
+            return false;
+        }
+
+        return true;
+    }
+
 
 
     public async Task<bool> BranchExists(string repositoryId, string branchName)
