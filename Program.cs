@@ -92,5 +92,8 @@ internal partial class Program
             Console.WriteLine("-------------------------------------------------------");
             Console.WriteLine("\nEverything is up to date, no pull requests needed! :)");
         }
+
+        Console.WriteLine("Press Enter to exit...");
+        Console.ReadLine();  // Added this line
     }
 }

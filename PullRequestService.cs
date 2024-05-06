@@ -1,7 +1,8 @@
-﻿using System.Net;
+﻿using Microsoft.Extensions.Options;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
-using Newtonsoft.Json;
+using System.Text.Json;
 using static AzureDevOpsPRBot.Program;
 
 namespace AzureDevOpsPRBot;
@@ -69,7 +70,7 @@ public class PullRequestService
         }
 
         var content = await response.Content.ReadAsStringAsync();
-        var refs = JsonConvert.DeserializeObject<RefResponse>(content);
+        var refs = JsonSerializer.Deserialize<RefResponse>(content, JsonOptions.DefaultOptions);
 
         return refs!.Count > 0;
     }
@@ -89,7 +90,7 @@ public class PullRequestService
         }
 
         var content = await response.Content.ReadAsStringAsync();
-        var diffs = JsonConvert.DeserializeObject<DiffResponse>(content);
+        var diffs = JsonSerializer.Deserialize<DiffResponse>(content, JsonOptions.DefaultOptions);
 
         return diffs!.ChangeCounts.Edit + diffs.ChangeCounts.Add + diffs.ChangeCounts.Delete > 0;
     }
@@ -111,7 +112,7 @@ public class PullRequestService
             description = "Automated pull request to merge changes"
         };
 
-        var json = JsonConvert.SerializeObject(pullRequest);
+        var json = JsonSerializer.Serialize(pullRequest, JsonOptions.DefaultOptions);
         var data = new StringContent(json, Encoding.UTF8, "application/json");
 
         var response = await _client.PostAsync($"{baseUrl}/{repositoryId}/pullrequests?api-version={apiVersion}", data);
@@ -149,7 +150,7 @@ public class PullRequestService
             }
         };
 
-        var json = JsonConvert.SerializeObject(branchCreation);
+        var json = JsonSerializer.Serialize(branchCreation, JsonOptions.DefaultOptions);
         var data = new StringContent(json, Encoding.UTF8, "application/json");
 
         var response = await _client.PostAsync($"{baseUrl}/{repositoryId}/refs?api-version={apiVersion}", data);
@@ -182,8 +183,7 @@ public class PullRequestService
         }
 
         var content = await response.Content.ReadAsStringAsync();
-        var prs = JsonConvert.DeserializeObject<PullRequestResponse>(content);
-
+        var prs = JsonSerializer.Deserialize<PullRequestResponse>(content, JsonOptions.DefaultOptions);
         return prs!.Count > 0;
     }
 
@@ -202,8 +202,16 @@ public class PullRequestService
         }
 
         var content = await response.Content.ReadAsStringAsync();
-        var commits = JsonConvert.DeserializeObject<CommitResponse>(content);
+        var commits = JsonSerializer.Deserialize<CommitResponse>(content, JsonOptions.DefaultOptions);
 
         return commits!.Count > 0 ? commits.Value[0].CommitId : null;
+    }
+
+    private static class JsonOptions
+    {
+        public static JsonSerializerOptions DefaultOptions { get; } = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+        };
     }
 }
