@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Options;
+﻿using System.Dynamic;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
@@ -20,20 +20,14 @@ public class PullRequestService
         _client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
         var pat = _configurationService.GetPat();
-   
-        // Validate the PAT
         var isPatValid = IsPatValid(pat).Result;
-        while(!isPatValid)
+        while (!isPatValid)
         {
             _configurationService.DeletePatFile();
             pat = _configurationService.GetPat();
             isPatValid = IsPatValid(pat).Result;
         }
-
-        var base64Token = Convert.ToBase64String(Encoding.ASCII.GetBytes($":{pat}"));
-        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", base64Token);
     }
-
 
     private async Task<bool> IsPatValid(string pat)
     {
@@ -45,16 +39,12 @@ public class PullRequestService
 
         if (!response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.NonAuthoritativeInformation)
         {
-            // Log the status code for debugging
             Console.WriteLine($"Response Status Code: {response.StatusCode}");
-
             return false;
         }
 
         return true;
     }
-
-
 
     public async Task<bool> BranchExists(string repositoryId, string branchName)
     {
@@ -70,9 +60,16 @@ public class PullRequestService
         }
 
         var content = await response.Content.ReadAsStringAsync();
-        var refs = JsonSerializer.Deserialize<RefResponse>(content, JsonOptions.DefaultOptions);
-
-        return refs!.Count > 0;
+        try
+        {
+            var refs = JsonSerializer.Deserialize<RefResponse>(content, JsonOptions.DefaultOptions);
+            return refs!.Count > 0;
+        }
+        catch (JsonException ex)
+        {
+            Console.WriteLine($"JSON deserialization error: {ex.Message}");
+            return false;
+        }
     }
 
     public async Task<bool> BranchHasChanges(string repositoryId, string sourceBranch, string targetBranch)
@@ -183,8 +180,17 @@ public class PullRequestService
         }
 
         var content = await response.Content.ReadAsStringAsync();
-        var prs = JsonSerializer.Deserialize<PullRequestResponse>(content, JsonOptions.DefaultOptions);
-        return prs!.Count > 0;
+        try
+        {
+            var prs = JsonSerializer.Deserialize<ExpandoObject>(content, JsonOptions.DefaultOptions);
+            var count = prs!.Count();
+            return count > 0;
+        }
+        catch (JsonException ex)
+        {
+            Console.WriteLine($"JSON deserialization error: {ex.Message}");
+            return false;
+        }
     }
 
     private async Task<string?> GetLatestCommitId(string repositoryId, string branchName)
@@ -202,16 +208,23 @@ public class PullRequestService
         }
 
         var content = await response.Content.ReadAsStringAsync();
-        var commits = JsonSerializer.Deserialize<CommitResponse>(content, JsonOptions.DefaultOptions);
-
-        return commits!.Count > 0 ? commits.Value[0].CommitId : null;
+        try
+        {
+            var commits = JsonSerializer.Deserialize<CommitResponse>(content, JsonOptions.DefaultOptions);
+            return commits!.Count > 0 ? commits.Value[0].CommitId : null;
+        }
+        catch (JsonException ex)
+        {
+            Console.WriteLine($"JSON deserialization error: {ex.Message}");
+            return null;
+        }
     }
 
     private static class JsonOptions
     {
-        public static JsonSerializerOptions DefaultOptions { get; } = new JsonSerializerOptions
+        public static JsonSerializerOptions DefaultOptions { get; } = new()
         {
-            PropertyNameCaseInsensitive = true,
+            PropertyNameCaseInsensitive = true
         };
     }
 }

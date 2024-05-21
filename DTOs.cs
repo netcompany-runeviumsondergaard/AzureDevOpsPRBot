@@ -38,10 +38,4 @@ internal abstract partial class Program
     {
         public string? CommitId { get; set; }
     }
-
-    public class PullRequestResponse
-    {
-        public int Count { get; set; }
-        public List<GitPullRequest> Value { get; set; }
-    }
 }
