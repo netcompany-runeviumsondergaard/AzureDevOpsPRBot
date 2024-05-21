@@ -182,9 +182,8 @@ public class PullRequestService
         var content = await response.Content.ReadAsStringAsync();
         try
         {
-            var prs = JsonSerializer.Deserialize<ExpandoObject>(content, JsonOptions.DefaultOptions);
-            var count = prs!.Count();
-            return count > 0;
+            var prs = JsonSerializer.Deserialize<PullRequestResponse>(content, JsonOptions.DefaultOptions);
+            return prs!.Count > 0;
         }
         catch (JsonException ex)
         {
