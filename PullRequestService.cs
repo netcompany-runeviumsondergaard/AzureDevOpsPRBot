@@ -51,19 +51,28 @@ public class PullRequestService
         var baseUrl = _configurationService.GetValue(Constants.BaseUrl);
         var apiVersion = _configurationService.GetValue(Constants.ApiVersion);
 
-        var response =
-            await _client.GetAsync($"{baseUrl}/{repositoryId}/refs?filter=heads/{branchName}&api-version={apiVersion}");
+        // Request to get potential matches (may include substrings)
+        var response = await _client.GetAsync($"{baseUrl}/{repositoryId}/refs?filter=heads/{branchName}&api-version={apiVersion}");
 
         if (!response.IsSuccessStatusCode)
         {
+            Console.WriteLine($"Failed to fetch branch data: {response.StatusCode}");
             return false;
         }
 
         var content = await response.Content.ReadAsStringAsync();
         try
         {
+            // Deserialize the response into a suitable object
             var refs = JsonSerializer.Deserialize<RefResponse>(content, JsonOptions.DefaultOptions);
-            return refs!.Count > 0;
+            if (refs == null || refs.Count == 0)
+            {
+                return false;
+            }
+
+            // Perform an exact match on the full reference path
+            string exactRef = $"refs/heads/{branchName}";
+            return refs.Value.Any(r => r.Name == exactRef);
         }
         catch (JsonException ex)
         {
@@ -97,9 +106,14 @@ public class PullRequestService
         var baseUrl = _configurationService.GetValue(Constants.BaseUrl);
         var apiVersion = _configurationService.GetValue(Constants.ApiVersion);
 
-
         var latestCommitId = await GetLatestCommitId(repositoryId, sourceBranch);
-        var intermediateBranch = await CreateIntermediateBranch(repositoryId, sourceBranch, latestCommitId);
+        var intermediateBranch = await CreateIntermediateBranchIfNotExists(repositoryId, sourceBranch, latestCommitId);
+
+        if (intermediateBranch == null)
+        {
+            Console.WriteLine("Failed to create or find the intermediate branch. No pull request will be created.");
+            return;
+        }
 
         var pullRequest = new
         {
@@ -126,22 +140,38 @@ public class PullRequestService
         }
         else
         {
-            Console.WriteLine(
-                $"Failed to create pull request. Status code: {response.StatusCode}, Error: {result}");
+            Console.WriteLine($"Failed to create pull request. Status code: {response.StatusCode}, Error: {result}");
         }
     }
 
-    private async Task<string?> CreateIntermediateBranch(string repositoryId, string sourceBranch, string? commitId)
+    private async Task<string?> CreateIntermediateBranchIfNotExists(string repositoryId, string sourceBranch, string? commitId)
+    {
+        var intermediateBranch = $"{sourceBranch}-intermediate";
+
+        // Check if the intermediate branch already exists
+        bool branchExists = await BranchExists(repositoryId, intermediateBranch);
+        if (branchExists)
+        {
+            Console.WriteLine($"Branch {intermediateBranch} already exists.");
+            return null; // Or return intermediateBranch if you want to use the existing one
+        }
+        else
+        {
+            // Proceed to create the branch
+            return await CreateBranch(repositoryId, intermediateBranch, commitId);
+        }
+    }
+
+    private async Task<string?> CreateBranch(string repositoryId, string intermediateBranch, string? commitId)
     {
         var baseUrl = _configurationService.GetValue(Constants.BaseUrl);
         var apiVersion = _configurationService.GetValue(Constants.ApiVersion);
-        var intermediateBranch = $"{sourceBranch}-intermediate";
-
+        var branchRef = $"refs/heads/{intermediateBranch}";
         var branchCreation = new[]
         {
             new
             {
-                name = $"refs/heads/{intermediateBranch}",
+                name = branchRef,
                 oldObjectId = "0000000000000000000000000000000000000000",
                 newObjectId = commitId
             }
@@ -149,20 +179,16 @@ public class PullRequestService
 
         var json = JsonSerializer.Serialize(branchCreation, JsonOptions.DefaultOptions);
         var data = new StringContent(json, Encoding.UTF8, "application/json");
-
         var response = await _client.PostAsync($"{baseUrl}/{repositoryId}/refs?api-version={apiVersion}", data);
 
-        var responseContent = await response.Content.ReadAsStringAsync();
-        Console.WriteLine(responseContent);
-
-        if (response.IsSuccessStatusCode)
+        if (!response.IsSuccessStatusCode)
         {
-            Console.WriteLine($"Intermediate branch {intermediateBranch} created successfully.");
-            return intermediateBranch;
+            Console.WriteLine($"Failed to create branch {intermediateBranch}. Status code: {response.StatusCode}");
+            return null;
         }
 
-        Console.WriteLine($"Failed to create intermediate branch. Status code: {response.StatusCode}");
-        return null;
+        Console.WriteLine($"Branch {intermediateBranch} created successfully.");
+        return intermediateBranch;
     }
 
     public async Task<bool> PullRequestExists(string repositoryId, string sourceBranch, string targetBranch)
