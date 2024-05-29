@@ -34,11 +34,17 @@ internal abstract partial class Program
 
     public class Commit
     {
-        public string? CommitId { get; set; }
+        public string CommitId { get; set; }
     }
+
     public class PullRequestResponse
     {
+        public List<PullRequest> Value { get; set; }
         public int Count { get; set; }
-        public List<object> Value { get; set; }
+    }
+
+    public class PullRequest
+    {
+        public string? SourceRefName { get; set; }
     }
 }

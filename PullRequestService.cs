@@ -1,8 +1,8 @@
-﻿using System.Dynamic;
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using static AzureDevOpsPRBot.Program;
 
 namespace AzureDevOpsPRBot;
@@ -37,13 +37,14 @@ public class PullRequestService
         var baseUrl = _configurationService.GetValue(Constants.BaseUrl);
         var response = await _client.GetAsync($"{baseUrl}");
 
-        if (!response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.NonAuthoritativeInformation)
+        if (response.IsSuccessStatusCode && response.StatusCode != HttpStatusCode.NonAuthoritativeInformation)
         {
-            Console.WriteLine($"Response Status Code: {response.StatusCode}");
-            return false;
+            return true;
         }
 
-        return true;
+        Console.WriteLine($"Response Status Code: {response.StatusCode}");
+        return false;
+
     }
 
     public async Task<bool> BranchExists(string repositoryId, string branchName)
@@ -71,7 +72,7 @@ public class PullRequestService
             }
 
             // Perform an exact match on the full reference path
-            string exactRef = $"refs/heads/{branchName}";
+            var exactRef = $"refs/heads/{branchName}";
             return refs.Value.Any(r => r.Name == exactRef);
         }
         catch (JsonException ex)
@@ -107,11 +108,10 @@ public class PullRequestService
         var apiVersion = _configurationService.GetValue(Constants.ApiVersion);
 
         var latestCommitId = await GetLatestCommitId(repositoryId, sourceBranch);
-        var intermediateBranch = await CreateIntermediateBranchIfNotExists(repositoryId, sourceBranch, latestCommitId);
+        var intermediateBranch = await CreateOrUpdateIntermediateBranch(repositoryId, sourceBranch, latestCommitId);
 
         if (intermediateBranch == null)
         {
-            Console.WriteLine("Failed to create or find the intermediate branch. No pull request will be created.");
             return;
         }
 
@@ -144,23 +144,27 @@ public class PullRequestService
         }
     }
 
-    private async Task<string?> CreateIntermediateBranchIfNotExists(string repositoryId, string sourceBranch, string? commitId)
+    private async Task<string?> CreateOrUpdateIntermediateBranch(string repositoryId, string sourceBranch, string? commitId)
     {
-        var intermediateBranch = $"{sourceBranch}-intermediate";
+        var intermediateBranch = $"{sourceBranch}-intermediate-{DateTime.Today:yyyy-MM-dd}";
 
-        // Check if the intermediate branch already exists
-        bool branchExists = await BranchExists(repositoryId, intermediateBranch);
-        if (branchExists)
+        var branchExists = await BranchExists(repositoryId, intermediateBranch);
+        if (!branchExists)
         {
-            Console.WriteLine($"Branch {intermediateBranch} already exists.");
-            return null; // Or return intermediateBranch if you want to use the existing one
-        }
-        else
-        {
-            // Proceed to create the branch
             return await CreateBranch(repositoryId, intermediateBranch, commitId);
         }
+
+        var baseUrl = _configurationService.GetValue(Constants.BaseUrl).Split("/_api")[0];
+        var branchUrl = $"{baseUrl}/_git/{repositoryId}?version=GB{Uri.EscapeDataString(intermediateBranch)}";
+       
+        Console.WriteLine($"The intermediate branch '{intermediateBranch}' already exists for repository '{repositoryId}'.");
+        Console.WriteLine($"Pleas delete the branch at: {branchUrl}");
+        Console.WriteLine($"To delete the branch remotely, run the following git command from the '{repositoryId}' folder:");
+        Console.WriteLine($"git push origin --delete {intermediateBranch}");
+        return null;
+
     }
+
 
     private async Task<string?> CreateBranch(string repositoryId, string intermediateBranch, string? commitId)
     {
@@ -196,9 +200,8 @@ public class PullRequestService
         var baseUrl = _configurationService.GetValue(Constants.BaseUrl);
         var apiVersion = _configurationService.GetValue(Constants.ApiVersion);
 
-        var response =
-            await _client.GetAsync(
-                $"{baseUrl}/{repositoryId}/pullrequests?sourceRefName=refs/heads/{sourceBranch}&targetRefName=refs/heads/{targetBranch}&api-version={apiVersion}");
+        var response = await _client.GetAsync(
+            $"{baseUrl}/{repositoryId}/pullrequests?targetRefName=refs/heads/{targetBranch}&api-version={apiVersion}");
 
         if (!response.IsSuccessStatusCode)
         {
@@ -208,8 +211,17 @@ public class PullRequestService
         var content = await response.Content.ReadAsStringAsync();
         try
         {
-            var prs = JsonSerializer.Deserialize<PullRequestResponse>(content, JsonOptions.DefaultOptions);
-            return prs!.Count > 0;
+            var prResponse = JsonSerializer.Deserialize<PullRequestResponse>(content, JsonOptions.DefaultOptions);
+            if (prResponse == null)
+            {
+                return false;
+            }
+
+            // Regex to match source branch pattern
+            Regex sourceBranchRegex = new($@"^refs/heads/{Regex.Escape(sourceBranch)}(-intermediate(-\d{{4}}-\d{{2}}-\d{{2}})?)?$", RegexOptions.IgnoreCase);
+
+            // Check if any PR matches the source branch pattern
+            return prResponse.Value.Any(pr => sourceBranchRegex.IsMatch(pr.SourceRefName));
         }
         catch (JsonException ex)
         {

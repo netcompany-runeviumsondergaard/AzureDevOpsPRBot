@@ -37,7 +37,7 @@ internal partial class Program
                 {
                     // Check if a pull request already exists
                     var prExists = await pullRequestService.PullRequestExists(repositoryId,
-                        $"{sourceBranch}-intermediate", targetBranch);
+                        sourceBranch, targetBranch);
                     if (prExists)
                     {
                         repositoriesWithExistingPr.Add((repositoryId, sourceBranch, targetBranch));
