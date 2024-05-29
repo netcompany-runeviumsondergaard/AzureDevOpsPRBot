@@ -58,6 +58,7 @@ internal partial class Program
                 {
                     nonExistentBranchRepositoryIds.Add((repositoryId, sourceBranch));
                 }
+
                 if (!targetBranchExists)
                 {
                     nonExistentBranchRepositoryIds.Add((repositoryId, targetBranch));
@@ -67,8 +68,6 @@ internal partial class Program
 
         ReportService.DisplayPrSummary(needPrRepositories, noChangeRepositoryIds, nonExistentBranchRepositoryIds,
             repositoriesWithExistingPr);
-
-        var isPullRequestsCreated = false;
 
         if (needPrRepositories.Count != 0)
         {
@@ -82,18 +81,24 @@ internal partial class Program
                     await pullRequestService.CreatePullRequest(repositoryPrInfo.RepositoryId,
                         repositoryPrInfo.SourceBranch, repositoryPrInfo.TargetBranch);
                 }
-
-                isPullRequestsCreated = true;
             }
         }
-
-        if (!isPullRequestsCreated)
+        else
         {
-            Console.WriteLine("-------------------------------------------------------");
-            Console.WriteLine("\nEverything is up to date, no pull requests needed! :)");
+            if (nonExistentBranchRepositoryIds.Count != 0)
+            {
+                Console.WriteLine("-------------------------------------------------------");
+                Console.WriteLine("\nSeems you are missing some source and/or target branches! :-O");
+            }
+            else
+            {
+                Console.WriteLine("-------------------------------------------------------");
+                Console.WriteLine("\nEverything is up to date, no pull requests needed! :)");
+            }
+
         }
 
         Console.WriteLine("Press Enter to exit...");
-        Console.ReadLine();  // Added this line
+        Console.ReadLine();
     }
 }

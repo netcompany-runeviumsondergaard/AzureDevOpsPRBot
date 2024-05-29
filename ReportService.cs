@@ -8,45 +8,45 @@ public static class ReportService
         Console.WriteLine($"{repoId,-30} | {sourceBranch,-20} | {targetBranch,-20}");
     }
 
-    public static void DisplayPrSummary(List<(string RepoId, string SourceBranch, string TargetBranch)> prSummary,
-        List<string> noChangeList, List<(string RepoId, string BranchName)> nonExistentBranches,
-        List<(string RepoId, string SourceBranch, string TargetBranch)> existingPrList)
+    public static void DisplayPrSummary(List<(string RepoId, string SourceBranch, string TargetBranch)> needPrRepositories,
+        List<string> noChangeRepositoryIds, List<(string RepoId, string BranchName)> nonExistentBranchRepositoryIds,
+        List<(string RepoId, string SourceBranch, string TargetBranch)> repositoriesWithExistingPr)
     {
         var lineSeparator = new string('-', 75);
 
         Console.WriteLine("----------------- Pull Request Summary -----------------");
 
         // Display repositories with potential pull requests
-        if (prSummary.Count != 0)
+        if (needPrRepositories.Count != 0)
         {
             Console.WriteLine("----------------- Repositories with Potential Pull Requests -----------------");
             Console.WriteLine($"{"Repository ID",-30} | {"Source Branch",-20} | {"Target Branch",-20}");
             Console.WriteLine(lineSeparator);
-            foreach (var (repoId, sourceBranch, targetBranch) in prSummary)
+            foreach (var (repoId, sourceBranch, targetBranch) in needPrRepositories)
             {
                 PrintRepoDetail(repoId, sourceBranch, targetBranch);
             }
         }
 
         // Display repositories with no changes
-        if (noChangeList.Count != 0)
+        if (noChangeRepositoryIds.Count != 0)
         {
             Console.WriteLine("----------------- Repositories with No Changes -----------------");
             Console.WriteLine($"{"Repository ID",-30} | Status");
             Console.WriteLine(new string('-', 45));
-            foreach (var repo in noChangeList)
+            foreach (var repo in noChangeRepositoryIds)
             {
                 Console.WriteLine($"{repo,-30} | No Changes");
             }
         }
 
         // Display repositories with non-existent branches
-        if (nonExistentBranches.Count != 0)
+        if (nonExistentBranchRepositoryIds.Count != 0)
         {
             Console.WriteLine("----------------- Repositories with Non-Existent Branches -----------------");
             Console.WriteLine($"{"Repository ID",-30} | {"Branch Name",-30} | Status");
             Console.WriteLine(lineSeparator);
-            foreach (var (repoId, branchName) in nonExistentBranches)
+            foreach (var (repoId, branchName) in nonExistentBranchRepositoryIds)
             {
                 // Set the console color to red for highlighting the error
                 Console.ForegroundColor = ConsoleColor.Red;
@@ -57,25 +57,15 @@ public static class ReportService
         }
 
         // Display repositories with existing pull requests
-        if (existingPrList.Count != 0)
+        if (repositoriesWithExistingPr.Count != 0)
         {
             Console.WriteLine("----------------- Repositories with Existing Pull Requests -----------------");
             Console.WriteLine($"{"Repository ID",-30} | {"Source Branch",-20} | {"Target Branch",-20}");
             Console.WriteLine(lineSeparator);
-            foreach (var (repoId, sourceBranch, targetBranch) in existingPrList)
+            foreach (var (repoId, sourceBranch, targetBranch) in repositoriesWithExistingPr)
             {
                 PrintRepoDetail(repoId, sourceBranch, targetBranch);
             }
         }
-
-        // If there are no pull requests needed, print a friendly message
-        if (prSummary.Count != 0 || nonExistentBranches.Count != 0 || existingPrList.Count != 0 ||
-            noChangeList.Any(repo => repo != "No Changes"))
-        {
-            return;
-        }
-
-        Console.WriteLine("-------------------------------------------------------");
-        Console.WriteLine("\nEverything is up to date, no pull requests needed! :)");
     }
 }

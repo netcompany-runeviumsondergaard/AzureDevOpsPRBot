@@ -146,7 +146,7 @@ public class PullRequestService
 
     private async Task<string?> CreateOrUpdateIntermediateBranch(string repositoryId, string sourceBranch, string? commitId)
     {
-        var intermediateBranch = $"{sourceBranch}-intermediate-{DateTime.Today:yyyy-MM-dd}";
+        var intermediateBranch = $"{sourceBranch}-intermediate-{DateTime.Now:yyyy-MM-dd-HH-mm}";
 
         var branchExists = await BranchExists(repositoryId, intermediateBranch);
         if (!branchExists)
@@ -218,10 +218,13 @@ public class PullRequestService
             }
 
             // Regex to match source branch pattern
-            Regex sourceBranchRegex = new($@"^refs/heads/{Regex.Escape(sourceBranch)}(-intermediate(-\d{{4}}-\d{{2}}-\d{{2}})?)?$", RegexOptions.IgnoreCase);
+            Regex sourceBranchRegex =
+                new(
+                    $@"^refs/heads/{Regex.Escape(sourceBranch)}-intermediate(-\d{{4}}-\d{{2}}-\d{{2}}(-\d{{2}}-\d{{2}})?)?$",
+                    RegexOptions.IgnoreCase);
 
             // Check if any PR matches the source branch pattern
-            return prResponse.Value.Any(pr => sourceBranchRegex.IsMatch(pr.SourceRefName));
+            return prResponse.Value.Any(pr => pr.SourceRefName != null && sourceBranchRegex.IsMatch(pr.SourceRefName));
         }
         catch (JsonException ex)
         {
