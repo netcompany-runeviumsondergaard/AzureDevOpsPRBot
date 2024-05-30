@@ -7,15 +7,14 @@ internal partial class Program
 {
     private static async Task Main()
     {
-        // Set up dependency injection
         ServiceCollection serviceCollection = [];
-        serviceCollection.AddDataProtection(); // This adds IDataProtectionProvider to DI
+        serviceCollection.AddDataProtection();
         IServiceProvider services = serviceCollection.BuildServiceProvider();
         var dataProtectionProvider = services.GetRequiredService<IDataProtectionProvider>();
 
-
         var configurationService = new ConfigurationService(dataProtectionProvider);
         var pullRequestService = new PullRequestService(configurationService);
+        await pullRequestService.InitializeAsync();
 
         var sourceBranch = configurationService.GetValue(Constants.SourceBranch);
         var targetBranch = configurationService.GetValue(Constants.TargetBranch);
@@ -95,7 +94,6 @@ internal partial class Program
                 Console.WriteLine("-------------------------------------------------------");
                 Console.WriteLine("\nEverything is up to date, no pull requests needed! :)");
             }
-
         }
 
         Console.WriteLine("Press Enter to exit...");
