@@ -16,7 +16,6 @@ The application uses an `appsettings.json` file for configuration. Here is an ex
 
 ```json
 {
-  "PAT": "<Your Personal Access Token>",
   "BaseUrl": "<Azure DevOps API Base URL>",
   "ApiVersion": "<API Version>",
   "SourceBranch": "<Branch from which changes will be pulled>",
